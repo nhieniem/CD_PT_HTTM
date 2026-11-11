@@ -1,0 +1,12 @@
+# Bỏ qua môi trường ảo Python
+.venv/
+.venv-1/
+__pycache__/
+
+# Bỏ qua các file video đầu ra và video test nặng
+*.mp4
+*.avi
+*.mov
+
+# Bỏ qua weights của mô hình YOLO nặng
+*.pt
