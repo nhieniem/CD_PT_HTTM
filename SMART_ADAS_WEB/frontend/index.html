@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart ADAS | Collision Monitor</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div><strong>SMART ADAS</strong><small>VIDEO COLLISION MONITOR</small></div>
+      </div>
+      <div class="system-state"><span class="pulse"></span><span id="systemStatus">SYSTEM IDLE</span></div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">ADVANCED DRIVER ASSISTANCE SYSTEM</p>
+          <h1>Vehicle Safety Monitor</h1>
+          <p class="muted">Phân tích video giao thông và cảnh báo nguy cơ va chạm bằng AI.</p>
+        </div>
+        <div class="version">PROTOTYPE <b>v0.1</b></div>
+      </section>
+
+      <section class="upload-panel panel">
+        <div class="section-heading"><div><span class="step">01</span><h2>Video input</h2></div><span class="muted">MP4 · AVI · MOV · MKV</span></div>
+        <div class="upload-row">
+          <label class="file-picker" for="videoFile"><span class="upload-icon">＋</span><span><b id="fileName">Chọn video từ máy tính</b><small id="fileHint">Chưa có video được tải lên</small></span></label>
+          <input id="videoFile" type="file" accept=".mp4,.avi,.mov,.mkv,video/*">
+          <button id="uploadBtn" class="btn secondary">Tải video lên</button>
+          <button id="startBtn" class="btn primary" disabled>▶ Bắt đầu phân tích</button>
+        </div>
+        <div class="control-row">
+          <button id="pauseBtn" class="btn small" disabled>Ⅱ Tạm dừng</button>
+          <button id="resumeBtn" class="btn small" disabled>▶ Tiếp tục</button>
+          <button id="stopBtn" class="btn small danger-outline" disabled>■ Dừng</button>
+          <span id="message" class="muted">Hãy chọn một video để bắt đầu.</span>
+        </div>
+      </section>
+
+      <section class="main-grid">
+        <div class="panel video-panel">
+          <div class="section-heading"><div><span class="step">02</span><h2>Live analysis</h2></div><span class="live-tag"><i></i> PROCESSING VIEW</span></div>
+          <div class="video-frame">
+            <img id="videoStream" src="/api/stream" alt="Video phân tích sẽ xuất hiện tại đây">
+            <div id="videoPlaceholder" class="video-placeholder"><div class="play-symbol">▶</div><b>Chưa có luồng video</b><span>Tải video và nhấn Bắt đầu phân tích</span></div>
+          </div>
+          <div class="progress-line"><div id="progressBar"></div></div>
+          <div class="video-meta"><span id="frameInfo">Frame: 0 / 0</span><span id="fpsInfo">Processing FPS: 0</span><span id="progressInfo">0%</span></div>
+        </div>
+
+        <aside class="panel monitor-panel">
+          <div class="section-heading"><div><span class="step">03</span><h2>Collision monitor</h2></div></div>
+          <div id="riskCard" class="risk-card safe">
+            <span class="risk-label">CURRENT RISK LEVEL</span>
+            <strong id="riskValue">SAFE</strong>
+            <span id="riskDescription">Chưa phát hiện nguy cơ cao</span>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><span>Vehicles tracked</span><strong id="vehicleCount">0</strong></div>
+            <div class="metric"><span>Estimated TTC*</span><strong id="ttcValue">—</strong></div>
+            <div class="metric"><span>Total alerts</span><strong id="alertCount">0</strong></div>
+            <div class="metric"><span>Analysis FPS</span><strong id="fpsValue">0</strong></div>
+          </div>
+          <p class="disclaimer">* TTC hiện là ước lượng heuristic từ tốc độ tăng kích thước bounding box, chưa phải phép đo va chạm vật lý đã hiệu chuẩn.</p>
+        </aside>
+      </section>
+
+      <section class="panel events-panel">
+        <div class="section-heading"><div><span class="step">04</span><h2>Alert history</h2></div><span class="muted">Sự kiện trong phiên phân tích</span></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Thời gian</th><th>Video time</th><th>Track ID</th><th>Đối tượng</th><th>Mức độ</th><th>Thông tin</th></tr></thead>
+          <tbody id="eventTable"><tr><td colspan="6" class="empty">Chưa có sự kiện cảnh báo.</td></tr></tbody></table>
+        </div>
+      </section>
+
+      <section class="download-row">
+        <div><b>Analysis output</b><small>Video đã được vẽ bounding box và cảnh báo</small></div>
+        <a id="downloadBtn" class="btn secondary disabled" href="/api/download">↓ Tải video kết quả</a>
+      </section>
+      <footer>SMART ADAS PROTOTYPE · Educational demonstration only · Not for real-world driving decisions</footer>
+    </main>
+  </div>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
