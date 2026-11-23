@@ -48,7 +48,24 @@
           <div class="video-frame">
             <img id="videoStream" src="/api/stream" alt="Video phân tích sẽ xuất hiện tại đây">
             <div id="videoPlaceholder" class="video-placeholder"><div class="play-symbol">▶</div><b>Chưa có luồng video</b><span>Tải video và nhấn Bắt đầu phân tích</span></div>
+            <div id="editorStage" class="editor-stage">
+              <img id="previewImage" alt="Khung hình đầu tiên để điều chỉnh vùng" />
+              <canvas id="zoneCanvas"></canvas>
+              <div id="previewHint" class="editor-hint">Tải video lên để chỉnh vùng cảm biến</div>
+            </div>
           </div>
+          <section class="zone-editor panel" id="zoneEditor">
+            <div class="section-heading"><div><h2>Điều chỉnh vùng cảnh báo</h2></div><span class="muted">Kéo các chấm tròn trên ảnh</span></div>
+            <p class="muted">Nhấn Tạm dừng để hiện 4 điểm kéo ngay trên video. Chọn WARNING hoặc DANGER, kéo các góc và nhấn Lưu. Nút Tiếp tục chỉ chạy video.</p>
+            <div class="editor-toolbar">
+              <button id="editWarning" class="btn small editor-selected">🟡 WARNING</button>
+              <button id="editDanger" class="btn small">🔴 DANGER</button>
+              <button id="resetZones" class="btn small">Đặt lại mặc định</button>
+              <button id="saveZones" class="btn primary">Lưu vùng cảm biến</button>
+            </div>
+
+            <p id="zoneMessage" class="muted">Các vùng được lưu cho những lần phân tích tiếp theo.</p>
+          </section>
           <div class="progress-line"><div id="progressBar"></div></div>
           <div class="video-meta"><span id="frameInfo">Frame: 0 / 0</span><span id="fpsInfo">Processing FPS: 0</span><span id="progressInfo">0%</span></div>
         </div>
@@ -86,5 +103,6 @@
     </main>
   </div>
   <script src="/js/dashboard.js"></script>
+  <script src="/js/zone_editor.js"></script>
 </body>
 </html>

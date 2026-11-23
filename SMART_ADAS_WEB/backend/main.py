@@ -7,6 +7,10 @@ from threading import Thread, Event, Lock
 from collections import deque
 import shutil
 import uuid
+import json
+import cv2
+import numpy as np
+from fastapi import Body
 
 from backend.services.adas_engine import ADASProcessor
 
@@ -14,6 +18,38 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 OUTPUT_DIR = BASE_DIR / "outputs"
 FRONTEND_DIR = BASE_DIR / "frontend"
+ZONE_FILE = BASE_DIR / "zone_config.json"
+DEFAULT_ZONES = {
+    "warning": [[0.475, 0.52], [0.515, 0.52], [0.610, 0.76], [0.395, 0.76]],
+    "danger": [[0.455, 0.65], [0.555, 0.65], [0.610, 0.76], [0.395, 0.76]],
+}
+
+def read_zones():
+    try:
+        return json.loads(ZONE_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        return json.loads(json.dumps(DEFAULT_ZONES))
+
+def validate_zones(data):
+    if not isinstance(data, dict) or set(data) != {"warning", "danger"}:
+        raise HTTPException(422, "Cần hai vùng warning và danger.")
+    for name in ("warning", "danger"):
+        points = data[name]
+        if not isinstance(points, list) or len(points) != 4:
+            raise HTTPException(422, f"Vùng {name} phải có đúng 4 điểm.")
+        for point in points:
+            if (not isinstance(point, list) or len(point) != 2 or
+                any(type(v) not in (int, float) or not 0 <= v <= 1 for v in point)):
+                raise HTTPException(422, "Tọa độ phải nằm trong khoảng 0 đến 1.")
+        polygon = np.array(points, dtype=np.float32)
+        if abs(cv2.contourArea(polygon)) < 0.00015 or not cv2.isContourConvex(polygon):
+            raise HTTPException(422, f"Vùng {name} phải là tứ giác lồi và đủ diện tích.")
+    outer = np.array(data["warning"], dtype=np.float32)
+    for point in data["danger"]:
+        if cv2.pointPolygonTest(outer, tuple(map(float, point)), False) < 0:
+            raise HTTPException(422, "Vùng DANGER phải nằm hoàn toàn trong vùng WARNING.")
+    return data
+
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -88,6 +124,49 @@ def home():
     return page.read_text(encoding="utf-8")
 
 
+@app.get("/api/zones")
+def get_zones():
+    return read_zones()
+
+@app.put("/api/zones")
+def save_zones(data: dict = Body(...)):
+    config = validate_zones(data)
+    with lock:
+        if worker is not None and worker.is_alive() and state["status"] != "paused":
+            raise HTTPException(409, "Hãy tạm dừng video trước khi lưu vùng cảm biến.")
+        ZONE_FILE.write_text(json.dumps(config, indent=2), encoding="utf-8")
+        if processor is not None and state["status"] == "paused":
+            processor.zone_config = json.loads(json.dumps(config))
+    return {"ok": True, "zones": config}
+
+@app.get("/api/preview")
+def preview_video(current: bool = False):
+    if uploaded_path is None or not uploaded_path.exists():
+        raise HTTPException(404, "Hãy tải video lên trước.")
+    cap = cv2.VideoCapture(str(uploaded_path))
+    try:
+        if current:
+            with lock:
+                index = state["frame_index"]
+            if index > 1:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, index - 1)
+        ok, frame = cap.read()
+        if not ok:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ok, frame = cap.read()
+        if not ok:
+            raise HTTPException(422, "Không đọc được khung hình xem trước.")
+        h, w = frame.shape[:2]
+        if w > 960:
+            frame = cv2.resize(frame, (960, round(h * 960 / w)))
+        ok, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        if not ok:
+            raise HTTPException(500, "Không tạo được ảnh xem trước.")
+        return StreamingResponse(iter([jpg.tobytes()]), media_type="image/jpeg", headers={"Cache-Control":"no-store"})
+    finally:
+        cap.release()
+
+
 @app.post("/api/upload")
 async def upload_video(file: UploadFile = File(...)):
     global uploaded_path, processor, worker
@@ -140,6 +219,7 @@ def run_processing(input_path: Path, output_path: Path):
             publish_frame=publish_frame,
             publish_metrics=publish_metrics,
             publish_event=publish_event,
+            zone_config=read_zones(),
         )
         processor.run()
         if stop_event.is_set():
